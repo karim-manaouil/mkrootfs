@@ -13,16 +13,19 @@ check_root=$(id | awk '{print $1}' | cut -d'=' -f2 | cut -d'(' -f1)
     exit 1; 
 }
 
-if [ ! -z $1 ] && [ $1 == "build" ] 
+if [ ! -z $1 ] 
 then
-    [ ! -z $2  ] && { 
-        name=$2; 
-    }
-    docker build -t xxdist:httpd . 1>/dev/null 2>/dev/null
-    echo "Image has been built"
-elif [ ! -z $1 ] 
-then
-    name=$1;
+    [ $1 == "stop" ] && {
+        [ ! -z $2 ] && { docker stop $2 && docker rm $2; exit 0; } || {
+            echo "Name is required !"; exit 3; }
+    };
+    [ $1 == "build" ] && {
+        [ ! -z $2  ] && { 
+            name=$2; 
+        }
+        docker build -t xxdist:httpd . 1>/dev/null 2>/dev/null
+        echo "Image has been built"
+    } || name=$1;
 fi
 
 check_build=$(docker images | grep xxdist | awk '{print $1":"$2}')
