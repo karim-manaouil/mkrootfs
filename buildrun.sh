@@ -28,6 +28,14 @@ INCLUDE_PACKAGES=""
 
 GENERATE_VBOX_VDI="false"
 
+##### build process #####
+
+. stderr.sh
+
+[ "$(id -u)" -ne 0 ] && fatal "${0##*\/} must be run as root(0)"
+
+info "Starting build process"
+
 for script in helpers/*.sh; do
     [ ! -x "${script}" ] && chmod u+x "${script}";
     . "${script}";
@@ -36,7 +44,7 @@ done
 include_packages SYS_PACKAGES BASE_PACKAGES NET_PACKAGES GUI_PACKAGES
 
 if ! check_build_dir; then
-    fatal "E: Build directory does not exist!"
+    fatal "Build directory does not exist!"
 fi
 
 if [[ "${USE_LOCAL_REPO}" == "true" ]]; then 

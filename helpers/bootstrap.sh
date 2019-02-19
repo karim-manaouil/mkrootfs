@@ -1,10 +1,5 @@
 #!/bin/bash
 
-fatal() {
-   >&2 echo $1
-   exit 1
-}
-
 include_packages() {
     for suite in $@; do
         var="$suite";
