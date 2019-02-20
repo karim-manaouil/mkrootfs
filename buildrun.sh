@@ -26,6 +26,12 @@ GUI_PACKAGES=""
 
 INCLUDE_PACKAGES=""
 
+KEEP_DEBOOTSTRAP_DIR="true"
+
+DEBOOTSTRAP_VERBOSE="true"
+
+IMAGE_SIZE=0
+
 GENERATE_VBOX_VDI="false"
 
 ##### build process #####
@@ -47,6 +53,9 @@ if ! check_build_dir; then
     fatal "Build directory does not exist!"
 fi
 
+info "Preparing build dir"
+#rm -rf "${BUILD_DIR}"/* 2>/dev/null 1>/dev/null
+
 if [[ "${USE_LOCAL_REPO}" == "true" ]]; then 
     spinup_local_repo;    
     choose_pkg_repo local 
@@ -58,22 +67,11 @@ debootstrap_rootfs
 
 generate_system_image
 
+create_partitions
+
 copy_rootfs_sysimg
 
 if [[ "${GENERATE_VBOX_VDI}" == "true" ]]; then
     generate_vbox_vdi;
 fi
-
-#debootstrap --verbose --components=main,contrib,non-free --include=--exclude=nano --arch amd64 stretch ./rootfs 
-
-
-#(
-#echo o # Create a new empty DOS partition table
-#echo n # Add a new partition
-#echo p # Primary partition
-#echo 1 # Partition number
-#echo   # First sector (Accept default: 1)
-#echo   # Last sector (Accept default: varies)
-#echo w # Write changes
-#) | sudo fdisk
 
