@@ -32,6 +32,12 @@ DEBOOTSTRAP_VERBOSE="true"
 
 IMAGE_SIZE=0
 
+ROOTFS_SIZE="" # Please, don't set this
+
+LOOP_DEV=""
+
+MOUNT_DIR="/tmp/mnt/"
+
 GENERATE_VBOX_VDI="false"
 
 ##### build process #####
@@ -70,6 +76,8 @@ generate_system_image
 create_partitions
 
 copy_rootfs_sysimg
+
+finish_installation
 
 if [[ "${GENERATE_VBOX_VDI}" == "true" ]]; then
     generate_vbox_vdi;
