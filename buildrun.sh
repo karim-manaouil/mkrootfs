@@ -6,7 +6,7 @@ HOSTNAME="esi"
 
 BUILD_DIR="rootfs"
 
-IMAGE="esi-debian.img"
+IMAGE="hdd.img"
 
 USE_LOCAL_REPO="false"
 
@@ -16,7 +16,7 @@ REMOTE_REPO="http://deb.debian.org/debian"
 
 PKG_REPO=""
 
-SYS_PACKAGES="linux-image-amd64, udev" 
+SYS_PACKAGES="linux-image-amd64, grub-pc, udev" 
 
 BASE_PACKAGES="locales, adduser, vim, less, wget, passwd, sudo"
 
@@ -69,7 +69,7 @@ else
     choose_pkg_repo remote
 fi
 
-debootstrap_rootfs
+#debootstrap_rootfs
 
 generate_system_image
 

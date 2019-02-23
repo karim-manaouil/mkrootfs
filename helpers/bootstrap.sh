@@ -58,9 +58,11 @@ debootstrap_rootfs() {
         verbose="--verbose";
     fi
         
-echo    debootstrap "${verbose}" "${opt}" --components=main,contrib,non-free \
+    debootstrap "${verbose}" "${opt}" --components=main,contrib,non-free \
     --include="${INCLUDE_PACKAGES}" --exclude=nano \
     --arch amd64 stretch "${BUILD_DIR}"
+
+    [[ "$?" -ne 0 ]] && fatal "Cannot bootstrap rootfs !"
 }
 
 # Size should be in megs otherwise this won't work
@@ -131,6 +133,7 @@ create_partitions() {
     mount -t ext4 "${fs}" "${MOUNT_DIR}" 1>/dev/null 2>/dev/null
     
     [[ "$?" -ne 0 ]] && fatal "Cannot mount partition !"
+
 }
 
 copy_rootfs_sysimg() {
@@ -144,9 +147,18 @@ copy_rootfs_sysimg() {
     [[ "$?" -ne 0 ]] && fatal "Aborting. Error while copying !"
 
     info "Installing the grub bootloader ..."
-    grub-install --boot-directory="${MOUNT_DIR}boot" --modules=part_msdos "${LOOP_DEV}" 1>/dev/null 2>/dev/null
+
+    mount -B /proc "${MOUNT_DIR}proc"
+    mount -B /proc "${MOUNT_DIR}sys"
+    mount -B /proc "${MOUNT_DIR}dev"
+
+    LC_ALL=C LANGUAGE=C LANG=C chroot grub-install --modules=part_msdos "${LOOP_DEV}" 1>/dev/null 2>/dev/null
+    LC_ALL=C LANGUAGE=C LANG=C chroot grub-mkconfig -o /boot/grub/grub.cfg
 
     [[ "$?" -ne 0 ]] && fatal "Could not install grub2 !"
+
+    # Generate the grub config
+    grub-mkconfig -o /boot/grub/grub.cfg
 }
 
 generate_vbox_vdi() {
@@ -154,6 +166,9 @@ generate_vbox_vdi() {
 }
 
 finish_installation() {
+    umount "${MOUNT_DIR}/proc"
+    umount "${MOUNT_DIR}/sys"
+    umount "${MOUNT_DIR}/dev"
     umount "${MOUNT_DIR}"
     losetup -d "${LOOP_DEV}"
     rmdir "${MOUNT_DIR}"
