@@ -48,7 +48,7 @@ GENERATE_VBOX_VDI="false"
 
 info "Starting build process"
 
-for script in helpers/*.sh; do
+for script in core/*.sh; do
     [ ! -x "${script}" ] && chmod u+x "${script}";
     . "${script}";
 done
