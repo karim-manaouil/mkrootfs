@@ -10,11 +10,7 @@ IMAGE="hdd.img"
 
 USE_LOCAL_REPO="false"
 
-LOCAL_REPO="http://localhost:8778/deian/"
-
-REMOTE_REPO="http://deb.debian.org/debian"
-
-PKG_REPO=""
+LOCAL_REPO="http://localhost:8778/deian/amd64 /"
 
 SYS_PACKAGES="linux-image-amd64, grub-pc, udev" 
 
@@ -38,7 +34,7 @@ LOOP_DEV=""
 
 MOUNT_DIR="/tmp/mnt/"
 
-GENERATE_VBOX_VDI="false"
+GENERATE_VBOX_VDI="true"
 
 ##### build process #####
 
@@ -63,23 +59,22 @@ info "Preparing build dir"
 #rm -rf "${BUILD_DIR}"/* 2>/dev/null 1>/dev/null
 
 if [[ "${USE_LOCAL_REPO}" == "true" ]]; then 
-    spinup_local_repo;    
-    choose_pkg_repo local 
-else
-    choose_pkg_repo remote
+    spinup_local_repo;     
 fi
 
 #debootstrap_rootfs
 
-generate_system_image
+#generate_system_image
 
-create_partitions
+#create_partitions
 
-copy_rootfs_sysimg
-
-finish_installation
+#copy_rootfs_sysimg
 
 if [[ "${GENERATE_VBOX_VDI}" == "true" ]]; then
+    info "Using VBoxManage to generate VDI image from RAW image ..."
     generate_vbox_vdi;
 fi
+
+#finish_installation
+
 

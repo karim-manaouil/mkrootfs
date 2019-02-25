@@ -33,7 +33,10 @@ check_build_dir() {
 }
 
 spinup_local_repo() {
-    fatal "TODO"
+    
+}
+
+restore_apt_sources() {
 }
 
 check_debootstrap_installation() {
@@ -149,23 +152,24 @@ copy_rootfs_sysimg() {
     info "Installing the grub bootloader ..."
 
     mount -B /proc "${MOUNT_DIR}proc"
-    mount -B /proc "${MOUNT_DIR}sys"
-    mount -B /proc "${MOUNT_DIR}dev"
+    mount -B /sys "${MOUNT_DIR}sys"
+    mount -B /dev "${MOUNT_DIR}dev"
 
-    LC_ALL=C LANGUAGE=C LANG=C chroot grub-install --modules=part_msdos "${LOOP_DEV}" 1>/dev/null 2>/dev/null
-    LC_ALL=C LANGUAGE=C LANG=C chroot grub-mkconfig -o /boot/grub/grub.cfg
+    LC_ALL=C  chroot "${MOUNT_DIR}" grub-install --modules=part_msdos "${LOOP_DEV}" >/dev/null 2>&1
+    LC_ALL=C  chroot "${MOUNT_DIR}" grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
 
     [[ "$?" -ne 0 ]] && fatal "Could not install grub2 !"
-
-    # Generate the grub config
-    grub-mkconfig -o /boot/grub/grub.cfg
 }
 
 generate_vbox_vdi() {
-    fatal "TODO"
+    VBoxManage convertdd "${IMAGE}" "${IMAGE%%.*}.vdi"
 }
 
 finish_installation() {
+    if [[ "${USE_LOCAL_REPO}" == "true" ]]; then
+        restore_apt_sources;
+    fi
+
     umount "${MOUNT_DIR}/proc"
     umount "${MOUNT_DIR}/sys"
     umount "${MOUNT_DIR}/dev"

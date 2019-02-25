@@ -1,4 +1,3 @@
 rootfs
-rootfsclone
 hdd.img
-mount
+hdd.vdi
