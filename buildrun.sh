@@ -38,9 +38,13 @@ GENERATE_VBOX_VDI="true"
 
 ##### build process #####
 
-. stderr.sh
+. core/stderr.sh
 
 [ "$(id -u)" -ne 0 ] && fatal "${0##*\/} must be run as root(0)"
+
+[ $# -ne 1 ] && fatal "rootfs dir is not specified !"
+
+BUILD_DIR="$1"
 
 info "Starting build process"
 
@@ -62,19 +66,19 @@ if [[ "${USE_LOCAL_REPO}" == "true" ]]; then
     spinup_local_repo;     
 fi
 
-#debootstrap_rootfs
+debootstrap_rootfs
 
-#generate_system_image
+generate_system_image
 
-#create_partitions
+create_partitions
 
-#copy_rootfs_sysimg
+copy_rootfs_sysimg
 
 if [[ "${GENERATE_VBOX_VDI}" == "true" ]]; then
     info "Using VBoxManage to generate VDI image from RAW image ..."
     generate_vbox_vdi;
 fi
 
-#finish_installation
+finish_installation
 
 

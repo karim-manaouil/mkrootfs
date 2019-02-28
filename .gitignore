@@ -1,3 +1,6 @@
 rootfs
+initrd
+iso
+rescue_initrd
 hdd.img
 hdd.vdi

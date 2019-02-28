@@ -33,10 +33,13 @@ check_build_dir() {
 }
 
 spinup_local_repo() {
-    
+    . makerepo.sh  
 }
 
 restore_apt_sources() {
+    rm /etc/apt/sources.list
+    mv /etc/apt/sources.xxdisthttpd.list \
+        /etc/apt/sources.list
 }
 
 check_debootstrap_installation() {
@@ -61,9 +64,15 @@ debootstrap_rootfs() {
         verbose="--verbose";
     fi
         
-    debootstrap "${verbose}" "${opt}" --components=main,contrib,non-free \
+    local DEBOOTSTRAP_MIRROR=""
+
+    if [[ "${USE_LOCAL_REPO}" == "true" ]]; then 
+        DEBOOTSTRAP_MIRROR=$LOCAL_REPO;    
+    fi
+
+  echo  debootstrap "${verbose}" "${opt}" --components=main,contrib,non-free \
     --include="${INCLUDE_PACKAGES}" --exclude=nano \
-    --arch amd64 stretch "${BUILD_DIR}"
+    --arch amd64 stretch "${BUILD_DIR}" "${DEBOOTSTRAP_MIRROR}"
 
     [[ "$?" -ne 0 ]] && fatal "Cannot bootstrap rootfs !"
 }
