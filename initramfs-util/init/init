@@ -1,0 +1,66 @@
+#!/bin/sh
+
+# Call this to load all modules 
+# and bring up devices
+
+load_modules()
+{
+    local modules="ata_generic sr_mod ahci scsi_mod ext4"
+   
+    for mod in ${modules}; 
+    do
+        opt=""
+        if [[ ${mod} == "ata_generic" ]]; then
+            opt="all_generic_ide=1"
+        fi
+
+        modprobe $mod $opt
+    done
+}
+
+launch_udev() 
+{
+    ${UDEVD} --daemon --resolve-names=never
+
+    udevadm trigger --action=add
+    udevadm settle || true
+}
+
+load_modules_and_devices() 
+{
+    launch_udev
+    load_modules
+}
+
+#Disable kernel messages from popping onto the screen
+echo 0 > /proc/sys/kernel/printk
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+export PATH
+
+mount -n -t proc     proc     /proc
+mount -n -t sysfs    sysfs    /sys
+
+if [[ ! -d /dev ]]; then 
+    mkdir /dev && chmod 0755 /dev
+fi
+
+if [ -x /sbin/udevd ]; then
+    UDEVD=/sbin/udevd
+
+elif [ -x /lib/udev/udevd ]; then
+    UDEVD=/lib/udev/udevd
+
+elif [ -x /lib/systemd/systemd-udevd ]; then
+    UDEVD=/lib/systemd/systemd-udevd
+
+else
+    echo "Cannot find udevd nor systemd-udevd"
+    # Kenel panic
+    exit 1 
+fi
+
+echo "Loading modules and devices ..."
+load_modules_and_devices
+
+exec /bin/sh

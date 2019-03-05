@@ -34,7 +34,7 @@ LOOP_DEV=""
 
 MOUNT_DIR="/tmp/mnt/"
 
-GENERATE_VBOX_VDI="true"
+GENERATE_VBOX_VDI="false"
 
 ##### build process #####
 
