@@ -1,8 +1,8 @@
+initrd_rescue
 initramfs-util/initramfs
 rootfs
 initrd
 iso
-initrd_rescue
 debian.iso
 hdd.img
 hdd.vdi
