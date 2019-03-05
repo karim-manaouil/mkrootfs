@@ -1,8 +1,0 @@
-# Soft dependencies extracted from modules themselves.
-softdep fscrypto pre: crypto-aes crypto-ecb
-softdep ext4 pre: crypto-crc32c crypto-aes crypto-ecb
-softdep jbd2 pre: crypto-crc32c
-softdep btrfs pre: crypto-crc32c
-softdep ohci_pci pre: ehci_pci
-softdep uhci_hcd pre: ehci_pci
-softdep libcrc32c pre: crc32c
