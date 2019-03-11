@@ -1,162 +1,101 @@
 #!/bin/bash
 
-# This file is a modified version of the official LFS mkinitramfs GPL script
+BUILDROOT=
+INITRD=
 
-copy()
+BINARIES="busybox fdisk"
+MODULES="ahci sd_mod virtio_blk virtio_pci" 
+MODULES="$MODULES ext4 squashf"
+
+SOBJS="/tmp/mkinitramfs-SHARED-objects-UNSORTED"
+
+parse_cmdline() 
 {
-  local file
-
-  if [ "$2" == "lib" ]; then
-    # sometimes a lib is found in multiple dirs.
-    # And start with lib64 because of ld-linux. 
-    file=$(find /lib64 /lib /usr/lib -name $1 | head -n1) 
-  else
-    file=$(type -p $1)
-  fi
-
-  if [ -n $file ] ; then
-    cp $file $WDIR$file
-  else
-    echo "Missing required file: $1 for directory $2"
-    rm -rf $WDIR
-    exit 1
-  fi
+    while (( $# )); do
+        case $1 in
+            -f)
+                INITRD="$2"
+                shift 2
+                ;;
+            -d)
+                BUILDROOT="$2"
+                shift 2
+                ;;
+            -b)
+                IFS=, read -r -a bins <<< "$2"
+                for bin in ${bins[@]}; do
+                    BINARIES+=("$bin")
+                done
+                unset bins
+                shift 2
+                ;;
+            *)
+               fatal "unknown option $1" 
+        esac                                
+    done   
 }
 
-# $1=$unsorted $2=$WDIR
-cleanup() 
-{
-    rm $1
+setup_initrd_rootfs()
+{   
+    if [[ -d $BUILDROOT ]] && [[ ! -w $BUILDROOT ]]; then
+        fatal "Directory $BUILDROOT exists but not writable !"
 
-    if [[ -z ${2%%/tmp/*} ]]; then
-        rm -rf $2 
-    fi
+    elif [[ ! -d $BUILDROOT ]] && ([[ -e $BUILDROOT ]] || [[ ! -w ${BUILDROOT##*/} ]]); then
+        fatal "File $BUILDROOT exists or ${BUILDROOT##*/} is not writable !"
+    fi;
+
+    [[ ! -d $BUILDROOT ]] && mkdir $BUILDROOT
+
+    mkdir -p $BUILDROOT{boot,bin,sbin,root,usr,sys,dev}
+    mkdir -p $BUILDROOT{proc,lib/x86_64-linux-gnu,lib64}  
 }
 
-if [ $(id -u) -ne 0 ]; then 
-    echo "Must be run as root !"; exit 1;
-fi
+copy_file()
+{
+    local src=$1 dst=$2
+   
+    [[ ! -d ${src%/*} ]] && mkdir -p ${src%/*}
 
-KERNEL_VERSION=$(uname -r)
+    # -p to preserve access rights + ownership 
+    cp -p $src $dst 
+}
 
-INITRAMFS_FILE=initrd-$KERNEL_VERSION
-
-printf "Creating $INITRAMFS_FILE... "
-
-binfiles="busybox"
-
-if [ -x /bin/udevadm ] ; then binfiles="$binfiles udevadm"; fi
-
-sbinfiles="modprobe blkid switch_root mkfs.ext4 fdisk losetup"
-
-for f in mdadm mdmon udevd udevadm; do
-  if [ -x /sbin/$f ] ; then sbinfiles="$sbinfiles $f"; fi
-done
-
-unsorted=$(mktemp /tmp/unsorted.XXXXXXXXXX)
-
-WDIR=
-
-if [ -n $1 ]; then
-    WDIR="initramfs"
-else
-    WDIR=$(mktemp -d /tmp/initrd-work.XXXXXXXXXX)
-fi
-
-# Create base directory structure
-mkdir -p $WDIR/{bin,dev,lib/firmware,lib/x86_64-linux-gnu}
-mkdir -p $WDIR/{lib64,run,sbin,sys,proc,usr}
-mkdir -p $WDIR/etc/{modprobe.d,udev/rules.d}
-touch $WDIR/etc/modprobe.d/modprobe.conf
-
-mknod -m 640 $WDIR/dev/console c 5 1
-mknod -m 664 $WDIR/dev/null    c 1 3
-
-if [ -f /etc/udev/udev.conf ]; then
-  cp /etc/udev/udev.conf $WDIR/etc/udev/udev.conf
-fi
-
-for file in $(find /etc/udev/rules.d/ -type f) ; do
-  cp $file $WDIR/etc/udev/rules.d
-done
-
-if [ -d /lib/firmware ]; then
-    cp -a /lib/firmware $WDIR/lib
-fi
-
-install -m0755 init/init $WDIR/init
-
-if [  -n "$KERNEL_VERSION" ] ; then
-  if [ -x /bin/kmod ] ; then
-    binfiles="$binfiles kmod"
-  else
-    binfiles="$binfiles lsmod"
-    sbinfiles="$sbinfiles insmod"
-  fi
-fi
-
-for f in $binfiles ; do
-  if [ -e /bin/$f ]; then d="/bin"; else d="/usr/bin"; fi
-  ldd $d/$f | sed "s/\t//" | cut -d " " -f1 | sed "s/\/lib64\///" >> $unsorted
-  copy $d/$f bin
-done
-
-for f in $sbinfiles ; do
-  ldd /sbin/$f | sed "s/\t//" | cut -d " " -f1 | sed "s/\/lib64\///" >> $unsorted
-  copy $f sbin
-done
-
-if [ -x /lib/udev/udevd ] ; then
-  ldd /lib/udev/udevd | sed "s/\t//" | cut -d " " -f1 | sed "s/\/lib64\///" >> $unsorted
-elif [ -x /lib/systemd/systemd-udevd ] ; then
-  ldd /lib/systemd/systemd-udevd | sed "s/\t//" | cut -d " " -f1 | sed "s/\/lib64\///" >> $unsorted
-fi
-
-pushd $WDIR/bin
-
-for bin in $(busybox --list); do
-    ln -s busybox $bin
-done
-
-popd
-
-sort $unsorted | uniq | while read library ; do
-  if [ "$library" == "linux-vdso.so.1" ] ||
-     [ "$library" == "linux-gate.so.1" ]; then
-    continue
-  fi
+install_binaries() 
+{
+    # get lib path from ldd output
+    local regex="(.*) (\/.*) \(.*\)";  
     
-  copy $library lib
-done
+    for bin in ${BINARIES[@]}; 
+    do
+        binpath=$(which $bin >/dev/null)        
+        [[ -z $binpath ]] && fatal "binary $bin doesn't exist, aborting."
 
-if [ -d /lib/udev ]; then
-  cp -a /lib/udev $WDIR/lib
-fi
-if [ -d /lib/systemd ]; then
-  cp -a /lib/systemd $WDIR/lib
-fi
+        copy_file $binpath $binpath 
+                       
+        while read -r var; 
+        do 
+            if [[ $var =~ $regex ]]; then
+                echo ${BASH_REMATCH[2]} >> "$SOBJS"
+            fi
+        done <<< $(ldd /bin/ls)
+    done
+}
 
-if [ -n "$KERNEL_VERSION" ]; then
-  find                                                                        \
-     /lib/modules/$KERNEL_VERSION/kernel/{crypto,fs,lib}                      \
-     /lib/modules/$KERNEL_VERSION/kernel/drivers/{block,ata,md,firewire}      \
-     /lib/modules/$KERNEL_VERSION/kernel/drivers/{scsi,message,pcmcia,virtio} \
-     /lib/modules/$KERNEL_VERSION/kernel/drivers/usb/{host,storage}           \
-     -type f 2> /dev/null | cpio --make-directories -p --quiet $WDIR
 
-  cp /lib/modules/$KERNEL_VERSION/modules.{builtin,order}                     \
-            $WDIR/lib/modules/$KERNEL_VERSION
+install_sobjs()
+{
+}
 
-  depmod -b $WDIR $KERNEL_VERSION
-fi
+. stderr.sh
 
-if [[ ! -z $2 ]]; then
-    ( cd $WDIR ; find . | cpio -o -H newc --quiet | gzip -9 ) > $INITRAMFS_FILE
-fi
+touch "$SOBJS"
 
-echo 
+parse_cmdline $@
 
-cleanup $unsorted $WDIR
+BUILDROOT="${BUILDROOT:-initramfs/}"
+INITRD="${INITRD:-initrd.gz}"
 
-printf "done.\n"
-
+setup_initrd_rootfs
+install_binaries
+install_sobjs
+install_modules

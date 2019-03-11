@@ -5,31 +5,32 @@
 
 load_modules()
 {
-    local modules="ata_generic sr_mod ahci scsi_mod ext4"
-   
-    for mod in ${modules}; 
-    do
-        opt=""
-        if [[ ${mod} == "ata_generic" ]]; then
-            opt="all_generic_ide=1"
-        fi
+    #modules=$(find /lib/modules 2>&1 | grep -E *.ko$ | sed 's/^\/.*\///' | sed 's/.ko//' |\
+     #   grep "sd_mod\|ahci\|sata_*\|pata_*\|ehci_pci\|usb_storage\|virtio_blk\|virtio_pci")
+    
+    modules="ahci sd_mod ext4 virtio_blk virtio_pci"
 
-        modprobe $mod $opt
+    for mod in $modules; 
+    do      
+        echo "Loading $mod ..."
+        modprobe $mod 
     done
 }
 
 launch_udev() 
 {
-    ${UDEVD} --daemon --resolve-names=never
+    udevd="/lib/systemd/systemd-udevd"
+
+    ${udevd} --daemon --resolve-names=never
 
     udevadm trigger --action=add
-    udevadm settle || true
+    udevadm settle
 }
 
 load_modules_and_devices() 
 {
-    launch_udev
-    load_modules
+    #launch_udev     || echo "udev launched"       
+    load_modules    || echo "Modules loaded"
 }
 
 #Disable kernel messages from popping onto the screen
@@ -38,27 +39,13 @@ echo 0 > /proc/sys/kernel/printk
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 export PATH
 
-mount -n -t proc     proc     /proc
-mount -n -t sysfs    sysfs    /sys
+test  ! -d /dev && mkdir /dev && chmod 0755 /dev
+test  ! -d /run && mkdir /run && chmod 0755 /run
 
-if [[ ! -d /dev ]]; then 
-    mkdir /dev && chmod 0755 /dev
-fi
-
-if [ -x /sbin/udevd ]; then
-    UDEVD=/sbin/udevd
-
-elif [ -x /lib/udev/udevd ]; then
-    UDEVD=/lib/udev/udevd
-
-elif [ -x /lib/systemd/systemd-udevd ]; then
-    UDEVD=/lib/systemd/systemd-udevd
-
-else
-    echo "Cannot find udevd nor systemd-udevd"
-    # Kenel panic
-    exit 1 
-fi
+mount -t proc proc /proc -o nosuid,noexec,nodev
+mount -t sysfs sys /sys -o nosuid,noexec,nodev
+mount -t devtmpfs dev /dev -o mode=0755,nosuid
+mount -t tmpfs run /run -o nosuid,nodev,mode=0755
 
 echo "Loading modules and devices ..."
 load_modules_and_devices

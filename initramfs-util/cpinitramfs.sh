@@ -1,13 +1,11 @@
 #!/bin/bash
 
-if [[ -z $1 ]]; then 
-    echo "Usage: $0 INITRAMFS_DIR"
-    exit 1
-fi
+_d_ramfsdir="${1:-initramfs}"
 
-cd $1
+pushd $_d_ramfsdir
 find . | cpio -H newc -o > ../initrd.cpio
-cd ..
+popd 
+
 gzip initrd.cpio -c > initrd.gz
 
 rm initrd.cpio

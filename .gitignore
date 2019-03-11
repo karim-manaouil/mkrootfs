@@ -1,4 +1,5 @@
 initrd_rescue
+mkinitcpio
 initramfs-util/initramfs
 rootfs
 initrd
