@@ -1,4 +1,5 @@
-#!/bin/bash
+#        #copy_file "$modpath" "${modpath:1}"
+!/bin/bash
 
 BUILDROOT=
 INITRD=
@@ -52,12 +53,8 @@ copy_file()
 {
     local src=$1 dst=$2
     local dstpath=$BUILDROOT$dst
-    
-
-    echo "copying ${dst##*/} to ${dstpath%\/*}"
-    
+        
     if [[ ! -d ${dstpath%\/*} ]]; then 
-        echo "creating ${dstpath%\/*}"
         mkdir -p ${dstpath%\/*}
     fi
 
@@ -86,16 +83,22 @@ install_binaries()
     done
 }
 
-
 install_sobjs()
 {
-    sos=$(echo "$SOBJS" | sort | uniq)
+    sos=$(cat $SOBJS | sort | uniq)
 
     for so in ${sos[@]}; do
         if [[ ! -e $BUILDROOT${so:1} ]]; then
             copy_file "$so" "${so:1}"
         fi
     done
+    
+    # Handling Stretch quirks
+    if [[ -e /etc/os-release ]]; then
+        cat /etc/os-release | grep -q stretch
+        [[ $? == 0 ]] && \
+            copy_file /lib64/ld-linux-x86-64.so.2 lib64/ld-linux-x86-64.so.2
+    fi
 }
 
 exists_in_list() 
@@ -142,8 +145,12 @@ install_modules()
 
     for mod in ${DEPS[@]}; 
     do
+        # modpath can sometimes contain more
+        # than one path
         modpath=$(modinfo -F filename "$mod")
-        copy_file "$modpath" "${modpath:1}"
+        for path in ${modpath[@]}; do 
+            copy_file "$path" "${path:1}"
+        done;
     done
 }
 
