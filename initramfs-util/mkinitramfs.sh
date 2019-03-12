@@ -1,16 +1,16 @@
-#        #copy_file "$modpath" "${modpath:1}"
-!/bin/bash
+#!/bin/bash
 
 BUILDROOT=
 INITRD=
 
-BINARIES="busybox fdisk"
+BINARIES="busybox:expand_busybox fdisk"
 MODULES="ahci sd_mod virtio_blk virtio_pci" 
-MODULES="$MODULES ext4 squashfs"
+MODULES="$MODULES ext4 isofs squashfs"
 
+LIBPATHS=()
 DEPS=() # $MODULES with their deps
 
-SOBJS="/tmp/mkinitramfs-SHARED-objects-UNSORTED"
+KERNEL_VERSION=$(uname -r)
 
 parse_cmdline() 
 {
@@ -32,21 +32,33 @@ parse_cmdline()
                 unset bins
                 shift 2
                 ;;
+            -m)
+                IFS=, read -r -a mods <<< "$2"
+                for mod in ${mods[@]}; do
+                    MODULES+=("$mod")
+                done
+                unset mods
+                shift 2
+                ;;
+            -k)
+                KERNEL_VERSION=$2
+                shift 2
+                ;;
             *)
                fatal "unknown option $1" 
         esac                                
     done   
 }
 
-setup_initrd_rootfs()
-{   
-    if [ ! -d "$BUILDROOT" ]; then 
-        mkdir $BUILDROOT
-        [[  $? != 0 ]] && fatal "Cannot create $BUILDROOT"
-    fi
+exists_in_list() 
+{
+    local obj=$1 list=${@:2}
 
-    mkdir -p "$BUILDROOT"{boot,bin,sbin,root,usr,sys,dev}
-    mkdir -p "$BUILDROOT"{proc,lib/x86_64-linux-gnu,lib64}  
+    for e in ${list[@]}; do
+        [[ $e == $obj ]] && return 0
+    done
+
+    return 1
 }
 
 copy_file()
@@ -62,14 +74,46 @@ copy_file()
     cp -p "$src" "$dstpath"
 }
 
+run_procs()
+{
+    # Some security
+    local is_func=
+
+    for proc in $@; do
+        is_func=$(LC_ALL=C type -t "$proc")
+        if [[ -n $is_func ]] && [[ $is_func == "function" ]]; then
+            $proc
+        fi
+    done
+}
+
+setup_initrd_rootfs()
+{   
+    if [ ! -d "$BUILDROOT" ]; then 
+        mkdir $BUILDROOT
+        [[  $? != 0 ]] && fatal "Cannot create $BUILDROOT"
+    fi
+
+    mkdir -p "$BUILDROOT"{boot,bin,sbin,root,usr,sys,dev}
+    mkdir -p "$BUILDROOT"{proc,lib/x86_64-linux-gnu,lib64}  
+}
+
 install_binaries() 
 {
-    # get lib path from ldd output
-    local regex="(.*) (\/.*) \(.*\)";  
-    
+    local regex="(.*) (\/.*) \(.*\)";  # get lib path from ldd output
+    local ddotsep="([^:]*):([^:]*)";
+    local procs=() # function names to run later
+
     for bin in ${BINARIES[@]}; 
     do
-        binpath=$(which $bin)        
+        if [[ $bin =~ $ddotsep ]]; then
+            name="${BASH_REMATCH[1]}"
+            procs+=("${BASH_REMATCH[2]}");
+        else
+            name=$bin
+        fi
+
+        binpath=$(which $name)        
         [[ -z $binpath ]] && fatal "binary $bin doesn't exist, aborting."
 
         copy_file "$binpath" "${binpath:1}"
@@ -77,17 +121,19 @@ install_binaries()
         while read -r var; 
         do 
             if [[ $var =~ $regex ]]; then
-                echo ${BASH_REMATCH[2]} >> "$SOBJS"
+                if ! exists_in_list ${BASH_REMATCH[2]} ${LIBPATHS[@]}; then
+                    LIBPATHS+=("${BASH_REMATCH[2]}")
+                fi
             fi
-        done <<< $(ldd /bin/ls)
+        done <<< $(ldd $binpath)
     done
+
+    run_procs ${procs[@]}
 }
 
 install_sobjs()
 {
-    sos=$(cat $SOBJS | sort | uniq)
-
-    for so in ${sos[@]}; do
+    for so in ${LIBPATHS[@]}; do
         if [[ ! -e $BUILDROOT${so:1} ]]; then
             copy_file "$so" "${so:1}"
         fi
@@ -99,17 +145,6 @@ install_sobjs()
         [[ $? == 0 ]] && \
             copy_file /lib64/ld-linux-x86-64.so.2 lib64/ld-linux-x86-64.so.2
     fi
-}
-
-exists_in_list() 
-{
-    local obj=$1 list=${@:2}
-
-    for e in ${list[@]}; do
-        [[ $e == $obj ]] && return 0
-    done
-
-    return 1
 }
 
 add_module_dependency()
@@ -158,7 +193,10 @@ install_modules()
 
 . stderr.sh
 
-touch "$SOBJS"
+[[ $(id -u) != 0 ]] && \
+    fatal "Script needs root permissions to complete."
+
+. uprocs.sh
 
 parse_cmdline $@
 
@@ -166,10 +204,17 @@ BUILDROOT="${BUILDROOT:-initramfs/}"
 INITRD="${INITRD:-initrd.gz}"
 
 info "Building initramfs image $INITRD ..."
-
 setup_initrd_rootfs
-install_binaries
-install_sobjs
-install_modules
+
+info "Installing binaries ..." && install_binaries
+info "Installing shared objects ..." && install_sobjs
+info "Installing modules with their dependency ..." && install_modules
+
+copy_file init/init init
+depmod -b ${BUILDROOT%\/} $KERNEL_VERSION 2>/dev/null
+
+info "Generating $INITRD ..."
+
+( cd $BUILDROOT ; find . | cpio -o -H newc --quiet | gzip -9 ) > $INITRD
 
 info "Build finished successfully"

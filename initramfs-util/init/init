@@ -4,33 +4,14 @@
 # and bring up devices
 
 load_modules()
-{
-    #modules=$(find /lib/modules 2>&1 | grep -E *.ko$ | sed 's/^\/.*\///' | sed 's/.ko//' |\
-     #   grep "sd_mod\|ahci\|sata_*\|pata_*\|ehci_pci\|usb_storage\|virtio_blk\|virtio_pci")
-    
-    modules="ahci sd_mod ext4 virtio_blk virtio_pci"
+{    
+    modules="ahci sd_mod virtio_blk virtio_pci ext4 isofs squashfs"
 
     for mod in $modules; 
     do      
         echo "Loading $mod ..."
         modprobe $mod 
     done
-}
-
-launch_udev() 
-{
-    udevd="/lib/systemd/systemd-udevd"
-
-    ${udevd} --daemon --resolve-names=never
-
-    udevadm trigger --action=add
-    udevadm settle
-}
-
-load_modules_and_devices() 
-{
-    #launch_udev     || echo "udev launched"       
-    load_modules    || echo "Modules loaded"
 }
 
 #Disable kernel messages from popping onto the screen
@@ -40,14 +21,24 @@ PATH=/bin:/usr/bin:/sbin:/usr/sbin
 export PATH
 
 test  ! -d /dev && mkdir /dev && chmod 0755 /dev
-test  ! -d /run && mkdir /run && chmod 0755 /run
 
 mount -t proc proc /proc -o nosuid,noexec,nodev
 mount -t sysfs sys /sys -o nosuid,noexec,nodev
 mount -t devtmpfs dev /dev -o mode=0755,nosuid
-mount -t tmpfs run /run -o nosuid,nodev,mode=0755
 
-echo "Loading modules and devices ..."
-load_modules_and_devices
+if [ ! -e /dev/sr0 ]; then
+    mknod /dev/sr0 b 11 0
+fi
+
+mkdir cdrom
+mount -t iso9660 /dev/sr0 cdrom
+
+if [ ! e /dev/loop0 ]; then
+    mknod /dev/loop0 b 7 0
+fi
+
+losetup /dev/loop0 /cdrom/rootfs.sq
+mkdir install_root
+mount -t squashfs /dev/loop0 install_root
 
 exec /bin/sh
