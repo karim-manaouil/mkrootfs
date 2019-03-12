@@ -1,11 +1,9 @@
 #!/bin/sh
 
-# Call this to load all modules 
-# and bring up devices
-
 load_modules()
 {    
-    modules="ahci sd_mod virtio_blk virtio_pci ext4 isofs squashfs"
+    modules="ahci sd_mod sr_mod virtio_blk virtio_pci" 
+    modules="$modules loop ext4 isofs squashfs"
 
     for mod in $modules; 
     do      
@@ -26,6 +24,8 @@ mount -t proc proc /proc -o nosuid,noexec,nodev
 mount -t sysfs sys /sys -o nosuid,noexec,nodev
 mount -t devtmpfs dev /dev -o mode=0755,nosuid
 
+load_modules
+
 if [ ! -e /dev/sr0 ]; then
     mknod /dev/sr0 b 11 0
 fi
@@ -33,7 +33,7 @@ fi
 mkdir cdrom
 mount -t iso9660 /dev/sr0 cdrom
 
-if [ ! e /dev/loop0 ]; then
+if [ ! -e /dev/loop0 ]; then
     mknod /dev/loop0 b 7 0
 fi
 

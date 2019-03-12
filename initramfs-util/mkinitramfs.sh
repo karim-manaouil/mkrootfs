@@ -4,8 +4,8 @@ BUILDROOT=
 INITRD=
 
 BINARIES="busybox:expand_busybox fdisk"
-MODULES="ahci sd_mod virtio_blk virtio_pci" 
-MODULES="$MODULES ext4 isofs squashfs"
+MODULES="ahci sd_mod sr_mod virtio_blk virtio_pci" 
+MODULES="$MODULES loop ext4 isofs squashfs"
 
 LIBPATHS=()
 DEPS=() # $MODULES with their deps
