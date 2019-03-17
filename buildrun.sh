@@ -45,10 +45,11 @@ GENERATE_VBOX_VDI="false"
 [ $# -ne 1 ] && fatal "rootfs dir is not specified !"
 
 BUILD_DIR="$1"
+BUILD_DIR=${BUILD_DIR%%/}
 
 info "Starting build process"
 
-for script in core/*.sh; do
+for script in core/_*.sh; do
     [ ! -x "${script}" ] && chmod u+x "${script}";
     . "${script}";
 done
@@ -60,7 +61,10 @@ if ! check_build_dir; then
 fi
 
 info "Preparing build dir"
-#rm -rf "${BUILD_DIR}"/* 2>/dev/null 1>/dev/null
+if [ "$(ls -A ${BUILD_DIR} )" ]; then
+	fatal "Build directory is not empty, removing its content is required!"
+	#empty_build_dir  #we maybe need a confirmation input before applying this!
+fi
 
 if [[ "${USE_LOCAL_REPO}" == "true" ]]; then 
     spinup_local_repo;     

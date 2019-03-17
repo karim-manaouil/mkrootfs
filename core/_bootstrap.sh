@@ -32,6 +32,10 @@ check_build_dir() {
     [ ! -d "${BUILD_DIR}" ] && false || true
 }
 
+empty_build_dir() {
+    rm -rf "${BUILD_DIR}"/* 2>/dev/null 1>/dev/null
+}
+
 spinup_local_repo() {
     . makerepo.sh  
 }
