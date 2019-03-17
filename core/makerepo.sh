@@ -36,8 +36,11 @@ dpkg-scanpackages "${HOST_PACKAGES}" /dev/null 2>/dev/null \
     | gzip -9c > "${HOST_PACKAGES}Packages.gz" 2>/dev/null
 
 info "Creating private sources.list"
-mv /etc/apt/sources.list /etc/apt/sources.list.xxdisthttpd.backup
-echo "deb [trusted=true] http://localhost:${PORT}/debian/amd64 /" > /etc/apt/sources.list
+cp /etc/apt/sources.list /etc/apt/sources.list.xxdisthttpd.backup
+
+# as a security measure, the sources.list file will not be deleted!
+sed -i "s/^/### /" /etc/apt/sources.list
+sed -i "1 s/^/# local repo used in the Debian system build \ndeb [trusted=true] http:\/\/localhost:${PORT}\/debian\/amd64 \/\n\n/" /etc/apt/sources.list
 
 info "Starting local apt server ..."
 docker run -d -p "${PORT}":80 -v "${HOST_PACKAGES}":"${SERVER_PACKAGES}" \
