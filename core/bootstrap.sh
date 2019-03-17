@@ -77,9 +77,9 @@ debootstrap_rootfs() {
     [[ "$?" -ne 0 ]] && fatal "Cannot bootstrap rootfs !"
 }
 
-# Size should be in megs otherwise this won't work
+# Size is in megs
 calc_rootfs_size() {
-    local size=$(du -sh "${BUILD_DIR}" | awk '{ print $1 }')    
+    local size=$(du -sh -BM "${BUILD_DIR}" | awk '{ print $1 }')    
     ROOTFS_SIZE="${size%%M}";
 }
 
