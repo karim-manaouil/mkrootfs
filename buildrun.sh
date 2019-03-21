@@ -12,13 +12,7 @@ USE_LOCAL_REPO="false"
 
 LOCAL_REPO="http://localhost:8778/deian/amd64 /"
 
-SYS_PACKAGES="linux-image-amd64, grub-pc, udev" 
-
-BASE_PACKAGES="locales, adduser, vim, less, wget, passwd, sudo"
-
-NET_PACKAGES="netbase, net-tools, iproute2, iputils-ping, isc-dhcp-client, ssh, network-manager"
-
-GUI_PACKAGES=""
+PACKAGES_FILE="conf-files/packages"
 
 INCLUDE_PACKAGES=""
 
@@ -38,7 +32,7 @@ GENERATE_VBOX_VDI="false"
 
 ##### build process #####
 
-. core/stderr.sh
+. core/_stderr.sh
 
 [ "$(id -u)" -ne 0 ] && fatal "${0##*\/} must be run as root(0)"
 
@@ -55,6 +49,7 @@ for script in core/_*.sh; do
 done
 
 include_packages SYS_PACKAGES BASE_PACKAGES NET_PACKAGES GUI_PACKAGES
+
 
 if ! check_build_dir; then
     fatal "Build directory does not exist!"

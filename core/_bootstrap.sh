@@ -1,17 +1,22 @@
 #!/bin/bash
 
-include_packages() {
-    local len=$#
-    local len=$((len - 1));
-    local args=("$@")
+parse_file() {
+    local grp=$1
+    local seg="\[$grp\]"
+    tr "\n" " " < $PACKAGES_FILE | grep -o "$seg[^\[]*" | sed "s/$seg//" | tr -s " "
 
-    for i in $(seq 0 $len); do
-        if [ ! -z "${!args[$i]}" ]; then
-            [ $i -eq 0 ] &&
-                INCLUDE_PACKAGES="${!args[$i]}" ||            
-                INCLUDE_PACKAGES="${INCLUDE_PACKAGES}, ${!args[$i]}"           
-        fi
+}
+
+include_packages() {
+    local args=$@
+    
+    for i in $args; do
+	for j in $(parse_file $i); do 
+	    INCLUDE_PACKAGES="$INCLUDE_PACKAGES, $j";
+        done
     done
+
+    INCLUDE_PACKAGES="$(echo "$INCLUDE_PACKAGES" | sed "s/^,*//")"
 }
 
 choose_pkg_repo() {
@@ -74,7 +79,7 @@ debootstrap_rootfs() {
         DEBOOTSTRAP_MIRROR=$LOCAL_REPO;    
     fi
 
-  echo  debootstrap "${verbose}" "${opt}" --components=main,contrib,non-free \
+    debootstrap "${verbose}" "${opt}" --components=main,contrib,non-free \
     --include="${INCLUDE_PACKAGES}" --exclude=nano \
     --arch amd64 stretch "${BUILD_DIR}" "${DEBOOTSTRAP_MIRROR}"
 
