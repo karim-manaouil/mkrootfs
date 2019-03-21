@@ -12,7 +12,7 @@ USE_LOCAL_REPO="false"
 
 LOCAL_REPO="http://localhost:8778/deian/amd64 /"
 
-PACKAGES_FILE="conf-files/packages"
+PACKAGES_FILE="conf/packages"
 
 INCLUDE_PACKAGES=""
 
