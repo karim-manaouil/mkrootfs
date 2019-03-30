@@ -4,7 +4,7 @@
 ########### infos ###########
 # The script "autobuild.sh" automates the creation of the image and launch of a container 
 # a directory "yocto" will be created in the working directory (if it doesn't exist) and mapped to the container
-# at least 30GB of free disk space will be needed at the first usage of this project ( to download the necessary files needed for the build of images
+# at least 30GB of free disk space will be needed at the first usage of this project ( to download the necessary files needed for the build of images)
 # the script must NOT be executed with root privilidges
 # in case already created, the user who launches the script must have r/w permissions to the directories assossiated (yocto/output)
 
