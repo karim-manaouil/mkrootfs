@@ -114,7 +114,9 @@ generate_system_image() {
 
     # Adding 4M of partition alignement + 10% metadata
     local megs=$((IMAGE_SIZE + IMAGE_SIZE/10 + 4))
-
+#tmp# Adding some extra space to the image to be able to work with it freely! (remove this when things get better)
+    megs=$((megs+800))
+#tmp# ###
     dd if=/dev/zero of="${IMAGE}" bs=$((1024*1024)) count="${megs}" 1>&2 2>/dev/null
 }
 
@@ -175,6 +177,7 @@ copy_rootfs_sysimg() {
 
     LC_ALL=C  chroot "${MOUNT_DIR}" grub-install --modules=part_msdos "${LOOP_DEV}" >/dev/null 2>&1
     LC_ALL=C  chroot "${MOUNT_DIR}" grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
+    LC_ALL=C  chroot "${MOUNT_DIR}" /bin/bash
 
     [[ "$?" -ne 0 ]] && fatal "Could not install grub2 !"
 }

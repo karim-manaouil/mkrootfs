@@ -25,6 +25,9 @@ network-manager
 
 
 [GUI_PACKAGES]
-
-
-
+openbox-lxde-session
+xserver-xorg
+plymouth
+lightdm
+lxde-core
+lxterminal
