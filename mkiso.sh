@@ -1,8 +1,14 @@
 #!/bin/bash
 
-if [ -e "debian.iso" ]; then
-    rm debian.iso
+output="debian.iso"
+
+if [ ! -z "$1" ]; then
+    output=$1
 fi
 
-grub-mkrescue -o debian.iso ./iso/
+if [ -e "$output" ]; then
+    rm $output
+fi
+
+grub-mkrescue -o $output ./iso/
 
