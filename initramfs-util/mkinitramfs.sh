@@ -203,6 +203,10 @@ parse_cmdline $@
 BUILDROOT="${BUILDROOT:-initramfs/}"
 INITRD="${INITRD:-initrd.gz}"
 
+if [ -d "$BUILDROOT" ]; then
+    rm -rf $BUILDROOT 
+fi
+
 info "Building initramfs image $INITRD ..."
 setup_initrd_rootfs
 
@@ -211,6 +215,11 @@ info "Installing shared objects ..." && install_sobjs
 info "Installing modules with their dependency ..." && install_modules
 
 copy_file init/init init
+
+for file in install/*; do
+    copy_file $file ${file##*/}
+done
+
 depmod -b ${BUILDROOT%\/} $KERNEL_VERSION 2>/dev/null
 
 info "Generating $INITRD ..."
