@@ -2,8 +2,8 @@
 
 load_modules()
 {    
-    modules="ahci sd_mod sr_mod virtio_blk virtio_pci" 
-    modules="$modules loop ext4 isofs squashfs"
+    modules="ahci sd_mod sr_mod virtio_blk virtio_pci crc32c" 
+    modules="$modules ohci_pci ehci_pci loop ext4 isofs squashfs"
 
     for mod in $modules; 
     do      
@@ -30,15 +30,4 @@ if [ ! -e /dev/sr0 ]; then
     mknod /dev/sr0 b 11 0
 fi
 
-mkdir cdrom
-mount -t iso9660 /dev/sr0 cdrom
-
-if [ ! -e /dev/loop0 ]; then
-    mknod /dev/loop0 b 7 0
-fi
-
-losetup /dev/loop0 /cdrom/rootfs.sq
-mkdir install_root
-mount -t squashfs /dev/loop0 install_root
-
-exec /bin/sh
+exec /bin/bash
